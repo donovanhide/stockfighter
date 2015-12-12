@@ -267,7 +267,7 @@ func (sf *Stockfighter) Resume(id uint64) error {
 // Stop a level using the instance id from a previously started Game.
 func (sf *Stockfighter) Stop(id uint64) error {
 	var resp response
-	url := gmUrl("instances/%d/resume", id)
+	url := gmUrl("instances/%d/stop", id)
 	return sf.do("POST", url, nil, &resp)
 }
 
