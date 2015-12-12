@@ -309,10 +309,7 @@ func (sf *Stockfighter) do(method, url string, body io.Reader, value apiCall) er
 	if err := json.NewDecoder(resp.Body).Decode(value); err != nil {
 		return err
 	}
-	if err := value.Err(); err != nil {
-		return err
-	}
-	return nil
+	return value.Err()
 }
 
 func (sf *Stockfighter) pump(url string, f func(*websocket.Conn) error) error {
