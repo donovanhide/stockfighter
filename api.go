@@ -293,15 +293,17 @@ func (sf *Stockfighter) do(method, url string, body io.Reader, value apiCall) er
 		return err
 	}
 	req.Header.Add("X-Starfighter-Authorization", sf.apiKey)
+	if sf.debug {
+		out, _ := httputil.DumpRequest(req, true)
+		log.Println(string(out))
+	}
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 	if sf.debug {
-		out, _ := httputil.DumpRequest(req, true)
-		log.Println(string(out))
-		out, _ = httputil.DumpResponse(resp, true)
+		out, _ := httputil.DumpResponse(resp, true)
 		log.Println(string(out))
 	}
 	if err := json.NewDecoder(resp.Body).Decode(value); err != nil {
