@@ -175,40 +175,41 @@ func (sf *Stockfighter) Sell(account, venue, stock string, price, quantity uint6
 // Get the status for an existing order.
 func (sf *Stockfighter) Status(venue, stock string, id uint64) (*OrderState, error) {
 	var resp orderResponse
-	path := apiUrl("venues/%s/stocks/%s/orders/%d", venue, stock, id)
-	if err := sf.do("GET", path, nil, &resp); err != nil {
+	url := apiUrl("venues/%s/stocks/%s/orders/%d", venue, stock, id)
+	if err := sf.do("GET", url, nil, &resp); err != nil {
 		return nil, err
 	}
 	return &resp.OrderState, nil
 }
 
-// Get the statuses for all an account's orders of a stock on a venue
+// Get the statuses for all an account's orders of a stock on a venue. If stock is a non-empty string, only statuses for that stock are returned
 func (sf *Stockfighter) StockStatus(account, venue, stock string) ([]OrderState, error) {
-	path := apiUrl("venues/%s/accounts/%s/stocks/%s/orders", venue, account, stock)
-	return sf.bulkStatus(path)
-}
-
-// Get the statuses for all an account's orders on a venue
-func (sf *Stockfighter) VenueStatus(account, venue string) ([]OrderState, error) {
-	path := apiUrl("venues/%s/accounts/%s/orders", venue, account)
-	return sf.bulkStatus(path)
+	url := apiUrl("venues/%s/accounts/%s/orders", venue, account)
+	if len(stock) > 0 {
+		url = apiUrl("venues/%s/accounts/%s/stocks/%s/orders", venue, account, stock)
+	}
+	var resp bulkOrderResponse
+	if err := sf.do("GET", url, nil, &resp); err != nil {
+		return nil, err
+	}
+	return resp.Orders, nil
 }
 
 // Cancel an existing order
 func (sf *Stockfighter) Cancel(venue, stock string, id uint64) error {
 	var resp response
-	path := apiUrl("venues/%s/stocks/%s/orders/%d", venue, stock, id)
-	return sf.do("DELETE", path, nil, &resp)
+	url := apiUrl("venues/%s/stocks/%s/orders/%d", venue, stock, id)
+	return sf.do("DELETE", url, nil, &resp)
 }
 
 // Subscribe to a stream of quotes for a venue. If stock is a non-empy string, only quotes for that stock are returned.
 func (sf *Stockfighter) Quotes(account, venue, stock string) (chan *Quote, error) {
-	path := wsUrl("%s/venues/%s/tickertape", account, venue)
+	url := wsUrl("%s/venues/%s/tickertape", account, venue)
 	if len(stock) > 0 {
-		path = wsUrl("%s/venues/%s/stocks/%s/tickertape", account, venue, stock)
+		url = wsUrl("%s/venues/%s/stocks/%s/tickertape", account, venue, stock)
 	}
 	c := make(chan *Quote)
-	return c, sf.pump(path, func(conn *websocket.Conn) error {
+	return c, sf.pump(url, func(conn *websocket.Conn) error {
 		var quote quoteMessage
 		if err := conn.ReadJSON(&quote); err != nil {
 			close(c)
@@ -223,12 +224,12 @@ func (sf *Stockfighter) Quotes(account, venue, stock string) (chan *Quote, error
 
 // Subscribe to a stream of executions for a venue. If stock is a non-empy string, only executions for that stock are returned.
 func (sf *Stockfighter) Executions(account, venue, stock string) (chan *Execution, error) {
-	path := wsUrl("%s/venues/%s/executions", account, venue)
+	url := wsUrl("%s/venues/%s/executions", account, venue)
 	if len(stock) > 0 {
-		path = wsUrl("%s/venues/%s/stocks/%s/executions", account, venue, stock)
+		url = wsUrl("%s/venues/%s/stocks/%s/executions", account, venue, stock)
 	}
 	c := make(chan *Execution)
-	return c, sf.pump(path, func(conn *websocket.Conn) error {
+	return c, sf.pump(url, func(conn *websocket.Conn) error {
 		var execution executionMessage
 		if err := conn.ReadJSON(&execution); err != nil {
 			close(c)
@@ -303,14 +304,6 @@ func (sf *Stockfighter) placeOrder(account, venue, stock, direction string, pric
 		return nil, err
 	}
 	return &resp.OrderState, nil
-}
-
-func (sf *Stockfighter) bulkStatus(url string) ([]OrderState, error) {
-	var resp bulkOrderResponse
-	if err := sf.do("GET", url, nil, &resp); err != nil {
-		return nil, err
-	}
-	return resp.Orders, nil
 }
 
 func (sf *Stockfighter) do(method, url string, body io.Reader, value apiCall) error {
