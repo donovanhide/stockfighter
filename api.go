@@ -201,7 +201,7 @@ func (sf *Stockfighter) Cancel(venue, stock string, id uint64) error {
 	return sf.do("DELETE", path, nil, &resp)
 }
 
-// Subsribe to a stream of quotes for a venue. If stock is a non-empy string, only quotes for that stock are returned.
+// Subscribe to a stream of quotes for a venue. If stock is a non-empy string, only quotes for that stock are returned.
 func (sf *Stockfighter) Quotes(account, venue, stock string) (chan *Quote, error) {
 	path := wsUrl("%s/venues/%s/tickertape", account, venue)
 	if len(stock) > 0 {
@@ -221,7 +221,7 @@ func (sf *Stockfighter) Quotes(account, venue, stock string) (chan *Quote, error
 	})
 }
 
-// Subsribe to a stream of executions for a venue. If stock is a non-empy string, only executions for that stock are returned.
+// Subscribe to a stream of executions for a venue. If stock is a non-empy string, only executions for that stock are returned.
 func (sf *Stockfighter) Executions(account, venue, stock string) (chan *Execution, error) {
 	path := wsUrl("%s/venues/%s/executions", account, venue)
 	if len(stock) > 0 {

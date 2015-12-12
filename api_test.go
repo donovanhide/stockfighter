@@ -64,6 +64,7 @@ func TestAuthenticated(t *testing.T) {
 		t.Fatalf("No tickers")
 	}
 	stock := game.Tickers[0]
+
 	quotes, err := sf.Quotes(game.Account, venue, stock)
 	checkErr(t, "Quotes", err)
 	for i := 0; i < 5; i++ {
