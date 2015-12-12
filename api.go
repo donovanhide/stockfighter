@@ -110,20 +110,15 @@ func NewStockfighter(apiKey string, debug bool) *Stockfighter {
 	}
 }
 
-// Check the API Is Up. Returns nil if ok, otherwise the error indicates the problem.
-func (sf *Stockfighter) Heartbeat() error {
+// Check the API Is Up. If venue is a non-empty string, then check that venue.
+// Returns nil if ok, otherwise the error indicates the problem.
+func (sf *Stockfighter) Heartbeat(venue string) error {
 	var resp response
-	return sf.do("GET", apiUrl("heartbeat"), nil, &resp)
-}
-
-// Check a venue is up. Returns nil if ok, otherwise the error indicates the problem.
-func (sf *Stockfighter) VenueHeartbeat(venue string) error {
-	var resp venueResponse
-	url := apiUrl("venues/%s/heartbeat", venue)
-	if err := sf.do("GET", url, nil, &resp); err != nil {
-		return err
+	url := apiUrl("heartbeat")
+	if len(venue) > 0 {
+		url = apiUrl("venues/%s/heartbeat", venue)
 	}
-	return nil
+	return sf.do("GET", url, nil, &resp)
 }
 
 // Get the stocks available for trading on a venue.
