@@ -30,7 +30,7 @@ type OrderBook struct {
 	Symbol    string
 	Asks      []Order
 	Bids      []Order
-	TimeStamp time.Time
+	TimeStamp time.Time `json:"ts"`
 }
 
 type Fill struct {
