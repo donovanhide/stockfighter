@@ -175,7 +175,8 @@ func (sf *Stockfighter) Status(venue, stock string, id uint64) (*OrderState, err
 	return &resp.OrderState, nil
 }
 
-// Get the statuses for all an account's orders of a stock on a venue. If stock is a non-empty string, only statuses for that stock are returned
+// Get the statuses for all an account's orders of a stock on a venue.
+// If stock is a non-empty string, only statuses for that stock are returned
 func (sf *Stockfighter) StockStatus(account, venue, stock string) ([]OrderState, error) {
 	url := apiUrl("venues/%s/accounts/%s/orders", venue, account)
 	if len(stock) > 0 {
@@ -195,7 +196,8 @@ func (sf *Stockfighter) Cancel(venue, stock string, id uint64) error {
 	return sf.do("DELETE", url, nil, &resp)
 }
 
-// Subscribe to a stream of quotes for a venue. If stock is a non-empy string, only quotes for that stock are returned.
+// Subscribe to a stream of quotes for a venue.
+// If stock is a non-empy string, only quotes for that stock are returned.
 func (sf *Stockfighter) Quotes(account, venue, stock string) (chan *Quote, error) {
 	url := wsUrl("%s/venues/%s/tickertape", account, venue)
 	if len(stock) > 0 {
@@ -215,7 +217,8 @@ func (sf *Stockfighter) Quotes(account, venue, stock string) (chan *Quote, error
 	})
 }
 
-// Subscribe to a stream of executions for a venue. If stock is a non-empy string, only executions for that stock are returned.
+// Subscribe to a stream of executions for a venue.
+// If stock is a non-empy string, only executions for that stock are returned.
 func (sf *Stockfighter) Executions(account, venue, stock string) (chan *Execution, error) {
 	url := wsUrl("%s/venues/%s/executions", account, venue)
 	if len(stock) > 0 {
