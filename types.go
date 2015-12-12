@@ -39,6 +39,16 @@ type Symbol struct {
 }
 
 type Order struct {
+	Account   string    `json:"account"`
+	Venue     string    `json:"venue"`
+	Stock     string    `json:"stock"`
+	Price     uint64    `json:"price"`
+	Quantity  uint64    `json:"qty"`
+	Direction string    `json:"direction"`
+	OrderType OrderType `json:"orderType"`
+}
+
+type StandingOrder struct {
 	Price    uint64
 	Quantity uint64 `json:"qty"`
 	IsBuy    bool
@@ -47,8 +57,8 @@ type Order struct {
 type OrderBook struct {
 	Venue     string
 	Symbol    string
-	Asks      []Order
-	Bids      []Order
+	Asks      []StandingOrder
+	Bids      []StandingOrder
 	TimeStamp time.Time `json:"ts"`
 }
 

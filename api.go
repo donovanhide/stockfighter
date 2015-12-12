@@ -65,16 +65,6 @@ type quoteResponse struct {
 	Quote
 }
 
-type orderRequest struct {
-	Account   string    `json:"account"`
-	Venue     string    `json:"venue"`
-	Stock     string    `json:"stock"`
-	Price     uint64    `json:"price"`
-	Quantity  uint64    `json:"qty"`
-	Direction string    `json:"direction"`
-	OrderType OrderType `json:"market"`
-}
-
 type orderResponse struct {
 	response
 	OrderState
@@ -129,7 +119,8 @@ func (sf *Stockfighter) Heartbeat() error {
 // Check a venue is up. Returns nil if ok, otherwise the error indicates the problem.
 func (sf *Stockfighter) VenueHeartbeat(venue string) error {
 	var resp venueResponse
-	if err := sf.do("GET", apiUrl("venues/%s/heartbeat", venue), nil, &resp); err != nil {
+	url := apiUrl("venues/%s/heartbeat", venue)
+	if err := sf.do("GET", url, nil, &resp); err != nil {
 		return err
 	}
 	return nil
@@ -138,7 +129,8 @@ func (sf *Stockfighter) VenueHeartbeat(venue string) error {
 // Get the stocks available for trading on a venue.
 func (sf *Stockfighter) Stocks(venue string) ([]Symbol, error) {
 	var resp stocksResponse
-	if err := sf.do("GET", apiUrl("venues/%s/stocks", venue), nil, &resp); err != nil {
+	url := apiUrl("venues/%s/stocks", venue)
+	if err := sf.do("GET", url, nil, &resp); err != nil {
 		return nil, err
 	}
 	return resp.Symbols, nil
@@ -147,7 +139,8 @@ func (sf *Stockfighter) Stocks(venue string) ([]Symbol, error) {
 // Get the orderbook for a particular stock.
 func (sf *Stockfighter) OrderBook(venue, stock string) (*OrderBook, error) {
 	var resp orderBookResponse
-	if err := sf.do("GET", apiUrl("venues/%s/stocks/%s", venue, stock), nil, &resp); err != nil {
+	url := apiUrl("venues/%s/stocks/%s", venue, stock)
+	if err := sf.do("GET", url, nil, &resp); err != nil {
 		return nil, err
 	}
 	return &resp.OrderBook, nil
@@ -156,20 +149,25 @@ func (sf *Stockfighter) OrderBook(venue, stock string) (*OrderBook, error) {
 // Get a quick look at the most recent trade information for a stock.
 func (sf *Stockfighter) Quote(venue, stock string) (*Quote, error) {
 	var resp quoteResponse
-	if err := sf.do("GET", apiUrl("venues/%s/stocks/%s/quote", venue, stock), nil, &resp); err != nil {
+	url := apiUrl("venues/%s/stocks/%s/quote", venue, stock)
+	if err := sf.do("GET", url, nil, &resp); err != nil {
 		return nil, err
 	}
 	return &resp.Quote, nil
 }
 
-// Place an order to buy a stock.
-func (sf *Stockfighter) Buy(account, venue, stock string, price, quantity uint64, orderType OrderType) (*OrderState, error) {
-	return sf.placeOrder(account, venue, stock, "buy", price, quantity, orderType)
-}
-
-// Place an order to sell a stock.
-func (sf *Stockfighter) Sell(account, venue, stock string, price, quantity uint64, orderType OrderType) (*OrderState, error) {
-	return sf.placeOrder(account, venue, stock, "sell", price, quantity, orderType)
+// Place an order
+func (sf *Stockfighter) Place(order *Order) (*OrderState, error) {
+	body, err := encodeJson(order)
+	if err != nil {
+		return nil, err
+	}
+	var resp orderResponse
+	url := apiUrl("venues/%s/stocks/%s/orders", order.Venue, order.Stock)
+	if err := sf.do("POST", url, body, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.OrderState, nil
 }
 
 // Get the status for an existing order.
@@ -245,7 +243,8 @@ func (sf *Stockfighter) Executions(account, venue, stock string) (chan *Executio
 // Start a new level.
 func (sf *Stockfighter) Start(level string) (*Game, error) {
 	var resp gameResponse
-	if err := sf.do("POST", gmUrl("levels/%s", level), nil, &resp); err != nil {
+	url := gmUrl("levels/%s", level)
+	if err := sf.do("POST", url, nil, &resp); err != nil {
 		return nil, err
 	}
 	return &resp.Game, nil
@@ -254,25 +253,29 @@ func (sf *Stockfighter) Start(level string) (*Game, error) {
 // Restart a level using the instance id from a previously started Game.
 func (sf *Stockfighter) Restart(id uint64) error {
 	var resp response
-	return sf.do("POST", gmUrl("instances/%d/restart", id), nil, &resp)
+	url := gmUrl("instances/%d/restart", id)
+	return sf.do("POST", url, nil, &resp)
 }
 
 // Resume a level using the instance id from a previously started Game.
 func (sf *Stockfighter) Resume(id uint64) error {
 	var resp response
-	return sf.do("POST", gmUrl("instances/%d/resume", id), nil, &resp)
+	url := gmUrl("instances/%d/resume", id)
+	return sf.do("POST", url, nil, &resp)
 }
 
 // Stop a level using the instance id from a previously started Game.
 func (sf *Stockfighter) Stop(id uint64) error {
 	var resp response
-	return sf.do("POST", gmUrl("instances/%d/resume", id), nil, &resp)
+	url := gmUrl("instances/%d/resume", id)
+	return sf.do("POST", url, nil, &resp)
 }
 
 // Get the GameState using the instance id from a previously started Game.
 func (sf *Stockfighter) GameStatus(id uint64) (*GameState, error) {
 	var resp gameStateResponse
-	if err := sf.do("Get", gmUrl("instances/%d", id), nil, &resp); err != nil {
+	url := gmUrl("instances/%d", id)
+	if err := sf.do("Get", url, nil, &resp); err != nil {
 		return nil, err
 	}
 	return &resp.GameState, nil
@@ -284,26 +287,6 @@ func encodeJson(v interface{}) (io.Reader, error) {
 		return nil, err
 	}
 	return &buf, nil
-}
-
-func (sf *Stockfighter) placeOrder(account, venue, stock, direction string, price, quantity uint64, orderType OrderType) (*OrderState, error) {
-	order, err := encodeJson(&orderRequest{
-		Account:   account,
-		Venue:     venue,
-		Stock:     stock,
-		Direction: direction,
-		Price:     price,
-		Quantity:  quantity,
-		OrderType: orderType,
-	})
-	if err != nil {
-		return nil, err
-	}
-	var resp orderResponse
-	if err := sf.do("POST", apiUrl("venues/%s/stocks/%s/orders", venue, stock), order, &resp); err != nil {
-		return nil, err
-	}
-	return &resp.OrderState, nil
 }
 
 func (sf *Stockfighter) do(method, url string, body io.Reader, value apiCall) error {
