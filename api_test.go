@@ -6,9 +6,8 @@ import (
 )
 
 var (
-	apiKey  = flag.String("api_key", "", "set for testing authenticated api calls")
-	account = flag.String("account", "", "account for placing and reviewing orders")
-	debug   = flag.Bool("debug", false, "dump HTTP requests and responses")
+	apiKey = flag.String("api_key", "", "set for testing authenticated api calls")
+	debug  = flag.Bool("debug", false, "dump HTTP requests and responses")
 )
 
 func init() {
@@ -47,15 +46,27 @@ func TestUnauthenticated(t *testing.T) {
 }
 
 func TestAuthenticated(t *testing.T) {
-	if len(*apiKey) == 0 || len(*account) == 0 {
-		t.Skip("Skipping authenticated tests. Set account and api_key flags to run.")
+	if len(*apiKey) == 0 {
+		t.Skip("Skipping authenticated tests. Set api_key flag to run. This will start and stop a game for your account!")
 	}
 
 	sf := NewStockfighter(*apiKey, *debug)
+	game, err := sf.Start("first_steps")
+	checkErr(t, "Start", err)
+	defer sf.Stop(game.InstanceId)
 
-	order, err := sf.Buy(*account, "TESTEX", "FOOBAR", 100, 100, Limit)
-	checkErr(t, "Buy", err)
-	if order.Account != *account {
-		t.Fatalf("Wrong account: %s %s", order.Account, account)
+	if len(game.Venues) == 0 {
+		t.Fatalf("No venues")
+	}
+	venue := game.Venues[0]
+
+	if len(game.Tickers) == 0 {
+		t.Fatalf("No tickers")
+	}
+	stock := game.Tickers[0]
+	quotes, err := sf.Quotes(game.Account, venue, stock)
+	checkErr(t, "Quotes", err)
+	for i := 0; i < 5; i++ {
+		t.Log(<-quotes)
 	}
 }
