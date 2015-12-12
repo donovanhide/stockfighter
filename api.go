@@ -277,8 +277,16 @@ func (sf *Stockfighter) GameStatus(id uint64) (*GameState, error) {
 	return &resp.GameState, nil
 }
 
+func encodeJson(v interface{}) (io.Reader, error) {
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(v); err != nil {
+		return nil, err
+	}
+	return &buf, nil
+}
+
 func (sf *Stockfighter) placeOrder(account, venue, stock, direction string, price, quantity uint64, orderType OrderType) (*OrderState, error) {
-	order := &orderRequest{
+	order, err := encodeJson(&orderRequest{
 		Account:   account,
 		Venue:     venue,
 		Stock:     stock,
@@ -286,6 +294,9 @@ func (sf *Stockfighter) placeOrder(account, venue, stock, direction string, pric
 		Price:     price,
 		Quantity:  quantity,
 		OrderType: orderType,
+	})
+	if err != nil {
+		return nil, err
 	}
 	var resp orderResponse
 	if err := sf.do("POST", apiUrl("venues/%s/stocks/%s/orders", venue, stock), order, &resp); err != nil {
@@ -302,16 +313,8 @@ func (sf *Stockfighter) bulkStatus(url string) ([]OrderState, error) {
 	return resp.Orders, nil
 }
 
-func (sf *Stockfighter) do(method, url string, body interface{}, value apiCall) error {
-	var r io.Reader
-	if body != nil {
-		var buf bytes.Buffer
-		if err := json.NewEncoder(&buf).Encode(body); err != nil {
-			return err
-		}
-		r = &buf
-	}
-	req, err := http.NewRequest(method, url, r)
+func (sf *Stockfighter) do(method, url string, body io.Reader, value apiCall) error {
+	req, err := http.NewRequest(method, url, body)
 	if err != nil {
 		return err
 	}
