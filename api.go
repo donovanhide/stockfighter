@@ -17,10 +17,17 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const (
-	apiUrl = "https://api.stockfighter.io/ob/api/"
-	wsUrl  = "wss://api.stockfighter.io/ob/ws/"
-)
+func apiUrl(path string, args ...interface{}) string {
+	return fmt.Sprintf("https://api.stockfighter.io/ob/api/"+path, args...)
+}
+
+func gmUrl(path string, args ...interface{}) string {
+	return fmt.Sprintf("https://api.stockfighter.io/gm/"+path, args...)
+}
+
+func wsUrl(path string, args ...interface{}) string {
+	return fmt.Sprintf("wss://api.stockfighter.io/ob/ws/"+path, args...)
+}
 
 type apiCall interface {
 	Err() error
@@ -29,6 +36,13 @@ type apiCall interface {
 type response struct {
 	Ok    bool
 	Error string
+}
+
+func (r response) Err() error {
+	if len(r.Error) > 0 {
+		return fmt.Errorf(r.Error)
+	}
+	return nil
 }
 
 type venueResponse struct {
@@ -82,11 +96,14 @@ type executionMessage struct {
 	Execution
 }
 
-func (r response) Err() error {
-	if len(r.Error) > 0 {
-		return fmt.Errorf(r.Error)
-	}
-	return nil
+type gameResponse struct {
+	response
+	Game
+}
+
+type gameStateResponse struct {
+	response
+	GameState
 }
 
 type Stockfighter struct {
@@ -106,13 +123,13 @@ func NewStockfighter(apiKey string, debug bool) *Stockfighter {
 // Check the API Is Up. Returns nil if ok, otherwise the error indicates the problem.
 func (sf *Stockfighter) Heartbeat() error {
 	var resp response
-	return sf.do("GET", "heartbeat", nil, &resp)
+	return sf.do("GET", apiUrl("heartbeat"), nil, &resp)
 }
 
 // Check a venue is up. Returns nil if ok, otherwise the error indicates the problem.
 func (sf *Stockfighter) VenueHeartbeat(venue string) error {
 	var resp venueResponse
-	if err := sf.do("GET", "venues/"+venue+"/heartbeat", nil, &resp); err != nil {
+	if err := sf.do("GET", apiUrl("venues/%s/heartbeat", venue), nil, &resp); err != nil {
 		return err
 	}
 	return nil
@@ -121,7 +138,7 @@ func (sf *Stockfighter) VenueHeartbeat(venue string) error {
 // Get the stocks available for trading on a venue.
 func (sf *Stockfighter) Stocks(venue string) ([]Symbol, error) {
 	var resp stocksResponse
-	if err := sf.do("GET", "venues/"+venue+"/stocks", nil, &resp); err != nil {
+	if err := sf.do("GET", apiUrl("venues/%s/stocks", venue), nil, &resp); err != nil {
 		return nil, err
 	}
 	return resp.Symbols, nil
@@ -130,7 +147,7 @@ func (sf *Stockfighter) Stocks(venue string) ([]Symbol, error) {
 // Get the orderbook for a particular stock.
 func (sf *Stockfighter) OrderBook(venue, stock string) (*OrderBook, error) {
 	var resp orderBookResponse
-	if err := sf.do("GET", "venues/"+venue+"/stocks/"+stock, nil, &resp); err != nil {
+	if err := sf.do("GET", apiUrl("venues/%s/stocks/%s", venue, stock), nil, &resp); err != nil {
 		return nil, err
 	}
 	return &resp.OrderBook, nil
@@ -139,7 +156,7 @@ func (sf *Stockfighter) OrderBook(venue, stock string) (*OrderBook, error) {
 // Get a quick look at the most recent trade information for a stock.
 func (sf *Stockfighter) Quote(venue, stock string) (*Quote, error) {
 	var resp quoteResponse
-	if err := sf.do("GET", "venues/"+venue+"/stocks/"+stock+"/quote", nil, &resp); err != nil {
+	if err := sf.do("GET", apiUrl("venues/%s/stocks/%s/quote", venue, stock), nil, &resp); err != nil {
 		return nil, err
 	}
 	return &resp.Quote, nil
@@ -158,7 +175,7 @@ func (sf *Stockfighter) Sell(account, venue, stock string, price, quantity uint6
 // Get the status for an existing order.
 func (sf *Stockfighter) Status(venue, stock string, id uint64) (*OrderState, error) {
 	var resp orderResponse
-	path := fmt.Sprintf("venues/%s/stocks/%s/orders/%d", venue, stock, id)
+	path := apiUrl("venues/%s/stocks/%s/orders/%d", venue, stock, id)
 	if err := sf.do("GET", path, nil, &resp); err != nil {
 		return nil, err
 	}
@@ -167,28 +184,28 @@ func (sf *Stockfighter) Status(venue, stock string, id uint64) (*OrderState, err
 
 // Get the statuses for all an account's orders of a stock on a venue
 func (sf *Stockfighter) StockStatus(account, venue, stock string) ([]OrderState, error) {
-	path := fmt.Sprintf("venues/%s/accounts/%s/stocks/%s/orders", venue, account, stock)
+	path := apiUrl("venues/%s/accounts/%s/stocks/%s/orders", venue, account, stock)
 	return sf.bulkStatus(path)
 }
 
 // Get the statuses for all an account's orders on a venue
 func (sf *Stockfighter) VenueStatus(account, venue string) ([]OrderState, error) {
-	path := fmt.Sprintf("venues/%s/accounts/%s/orders", venue, account)
+	path := apiUrl("venues/%s/accounts/%s/orders", venue, account)
 	return sf.bulkStatus(path)
 }
 
 // Cancel an existing order
 func (sf *Stockfighter) Cancel(venue, stock string, id uint64) error {
 	var resp response
-	path := fmt.Sprintf("venues/%s/stocks/%s/orders/%d", venue, stock, id)
+	path := apiUrl("venues/%s/stocks/%s/orders/%d", venue, stock, id)
 	return sf.do("DELETE", path, nil, &resp)
 }
 
 // Subsribe to a stream of quotes for a venue. If stock is a non-empy string, only quotes for that stock are returned.
 func (sf *Stockfighter) Quotes(account, venue, stock string) (chan *Quote, error) {
-	path := fmt.Sprintf("%s/venues/%s/tickertape", account, venue)
+	path := wsUrl("%s/venues/%s/tickertape", account, venue)
 	if len(stock) > 0 {
-		path = fmt.Sprintf("%s/venues/%s/stocks/%s/tickertape", account, venue, stock)
+		path = wsUrl("%s/venues/%s/stocks/%s/tickertape", account, venue, stock)
 	}
 	c := make(chan *Quote)
 	return c, sf.pump(path, func(conn *websocket.Conn) error {
@@ -206,9 +223,9 @@ func (sf *Stockfighter) Quotes(account, venue, stock string) (chan *Quote, error
 
 // Subsribe to a stream of executions for a venue. If stock is a non-empy string, only executions for that stock are returned.
 func (sf *Stockfighter) Executions(account, venue, stock string) (chan *Execution, error) {
-	path := fmt.Sprintf("%s/venues/%s/executions", account, venue)
+	path := wsUrl("%s/venues/%s/executions", account, venue)
 	if len(stock) > 0 {
-		path = fmt.Sprintf("%s/venues/%s/stocks/%s/executions", account, venue, stock)
+		path = wsUrl("%s/venues/%s/stocks/%s/executions", account, venue, stock)
 	}
 	c := make(chan *Execution)
 	return c, sf.pump(path, func(conn *websocket.Conn) error {
@@ -224,6 +241,42 @@ func (sf *Stockfighter) Executions(account, venue, stock string) (chan *Executio
 	})
 }
 
+// Start a new level.
+func (sf *Stockfighter) Start(level string) (*Game, error) {
+	var resp gameResponse
+	if err := sf.do("POST", gmUrl("levels/%s", level), nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.Game, nil
+}
+
+// Restart a level using the instance id from a previously started Game.
+func (sf *Stockfighter) Restart(id uint64) error {
+	var resp response
+	return sf.do("POST", gmUrl("instances/%d/restart", id), nil, &resp)
+}
+
+// Resume a level using the instance id from a previously started Game.
+func (sf *Stockfighter) Resume(id uint64) error {
+	var resp response
+	return sf.do("POST", gmUrl("instances/%d/resume", id), nil, &resp)
+}
+
+// Stop a level using the instance id from a previously started Game.
+func (sf *Stockfighter) Stop(id uint64) error {
+	var resp response
+	return sf.do("POST", gmUrl("instances/%d/resume", id), nil, &resp)
+}
+
+// Get the GameState using the instance id from a previously started Game.
+func (sf *Stockfighter) GameStatus(id uint64) (*GameState, error) {
+	var resp gameStateResponse
+	if err := sf.do("Get", gmUrl("instances/%d", id), nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.GameState, nil
+}
+
 func (sf *Stockfighter) placeOrder(account, venue, stock, direction string, price, quantity uint64, orderType OrderType) (*OrderState, error) {
 	order := &orderRequest{
 		Account:   account,
@@ -235,24 +288,21 @@ func (sf *Stockfighter) placeOrder(account, venue, stock, direction string, pric
 		OrderType: orderType,
 	}
 	var resp orderResponse
-	if err := sf.do("POST", "venues/"+venue+"/stocks/"+stock+"/orders", order, &resp); err != nil {
+	if err := sf.do("POST", apiUrl("venues/%s/stocks/%s/orders", venue, stock), order, &resp); err != nil {
 		return nil, err
-	}
-	if resp.Venue != venue || resp.Symbol != stock {
-		return nil, fmt.Errorf("venue or stock in response does not match: %s %s %s %s", venue, resp.Venue, stock, resp.Symbol)
 	}
 	return &resp.OrderState, nil
 }
 
-func (sf *Stockfighter) bulkStatus(path string) ([]OrderState, error) {
+func (sf *Stockfighter) bulkStatus(url string) ([]OrderState, error) {
 	var resp bulkOrderResponse
-	if err := sf.do("GET", path, nil, &resp); err != nil {
+	if err := sf.do("GET", url, nil, &resp); err != nil {
 		return nil, err
 	}
 	return resp.Orders, nil
 }
 
-func (sf *Stockfighter) do(method, path string, body interface{}, value apiCall) error {
+func (sf *Stockfighter) do(method, url string, body interface{}, value apiCall) error {
 	var r io.Reader
 	if body != nil {
 		var buf bytes.Buffer
@@ -261,7 +311,7 @@ func (sf *Stockfighter) do(method, path string, body interface{}, value apiCall)
 		}
 		r = &buf
 	}
-	req, err := http.NewRequest(method, apiUrl+path, r)
+	req, err := http.NewRequest(method, url, r)
 	if err != nil {
 		return err
 	}
@@ -286,8 +336,8 @@ func (sf *Stockfighter) do(method, path string, body interface{}, value apiCall)
 	return nil
 }
 
-func (sf *Stockfighter) pump(path string, f func(*websocket.Conn) error) error {
-	conn, _, err := websocket.DefaultDialer.Dial(wsUrl+path, nil)
+func (sf *Stockfighter) pump(url string, f func(*websocket.Conn) error) error {
+	conn, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		return err
 	}

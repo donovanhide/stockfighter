@@ -14,6 +14,25 @@ const (
 	ImmediateOrCancel
 )
 
+type Game struct {
+	Account              string
+	InstanceId           uint64
+	Instructions         map[string]string
+	SecondsPerTradingDay uint64
+	Tickers              []string
+	Venues               []string
+}
+
+type GameState struct {
+	Details struct {
+		EndOfTheWorldDay uint64
+		TradingDay       uint64
+	}
+	Done  bool
+	Id    uint64
+	State string
+}
+
 type Symbol struct {
 	Symbol string
 	Name   string
