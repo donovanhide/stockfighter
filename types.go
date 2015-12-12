@@ -90,7 +90,7 @@ var orderTypes = [...]string{
 	ImmediateOrCancel: "immediate-or-cancel",
 }
 
-func (o *OrderType) MarshalText() ([]byte, error) {
+func (o OrderType) MarshalText() ([]byte, error) {
 	return []byte(orderTypes[o]), nil
 }
 
