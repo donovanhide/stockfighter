@@ -184,27 +184,12 @@ func (sf *Stockfighter) Cancel(venue, stock string, id uint64) error {
 	return sf.do("DELETE", path, nil, &resp)
 }
 
-// Subsribe to a stream of quotes for a venue
-func (sf *Stockfighter) VenueQuotes(account, venue string) (chan *Quote, error) {
-	return sf.quotes(fmt.Sprintf("%s/venues/%s/tickertape", account, venue))
-}
-
-// Subsribe to a stream of quotes for a stock on a venue
-func (sf *Stockfighter) StockQuotes(account, venue, stock string) (chan *Quote, error) {
-	return sf.quotes(fmt.Sprintf("%s/venues/%s/stocks/%s/tickertape", account, venue, stock))
-}
-
-// Subsribe to a stream of executions for a stock on a venue
-func (sf *Stockfighter) VenueExecutions(account, venue string) (chan *Execution, error) {
-	return sf.executions(fmt.Sprintf("%s/venues/%s/executions", account, venue))
-}
-
-// Subsribe to a stream of executions for a stock on a venue
-func (sf *Stockfighter) StockExecutions(account, venue, stock string) (chan *Execution, error) {
-	return sf.executions(fmt.Sprintf("%s/venues/%s/stocks/%s/executions", account, venue, stock))
-}
-
-func (sf *Stockfighter) quotes(path string) (chan *Quote, error) {
+// Subsribe to a stream of quotes for a venue. If stock is a non-empy string, only quotes for that stock are returned.
+func (sf *Stockfighter) Quotes(account, venue, stock string) (chan *Quote, error) {
+	path := fmt.Sprintf("%s/venues/%s/tickertape", account, venue)
+	if len(stock) > 0 {
+		path = fmt.Sprintf("%s/venues/%s/stocks/%s/tickertape", account, venue, stock)
+	}
 	c := make(chan *Quote)
 	return c, sf.pump(path, func(conn *websocket.Conn) error {
 		var quote quoteMessage
@@ -219,7 +204,12 @@ func (sf *Stockfighter) quotes(path string) (chan *Quote, error) {
 	})
 }
 
-func (sf *Stockfighter) executions(path string) (chan *Execution, error) {
+// Subsribe to a stream of executions for a venue. If stock is a non-empy string, only executions for that stock are returned.
+func (sf *Stockfighter) VenueExecutions(account, venue, stock string) (chan *Execution, error) {
+	path := fmt.Sprintf("%s/venues/%s/executions", account, venue)
+	if len(stock) > 0 {
+		path = fmt.Sprintf("%s/venues/%s/stocks/%s/executions", account, venue, stock)
+	}
 	c := make(chan *Execution)
 	return c, sf.pump(path, func(conn *websocket.Conn) error {
 		var execution executionMessage
