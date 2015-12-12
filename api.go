@@ -205,7 +205,7 @@ func (sf *Stockfighter) Quotes(account, venue, stock string) (chan *Quote, error
 }
 
 // Subsribe to a stream of executions for a venue. If stock is a non-empy string, only executions for that stock are returned.
-func (sf *Stockfighter) VenueExecutions(account, venue, stock string) (chan *Execution, error) {
+func (sf *Stockfighter) Executions(account, venue, stock string) (chan *Execution, error) {
 	path := fmt.Sprintf("%s/venues/%s/executions", account, venue)
 	if len(stock) > 0 {
 		path = fmt.Sprintf("%s/venues/%s/stocks/%s/executions", account, venue, stock)
