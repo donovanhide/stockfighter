@@ -19,7 +19,7 @@ import (
 
 const (
 	apiUrl = "https://api.stockfighter.io/ob/api/"
-	wsUrl  = "https://api.stockfighter.io/ob/ws/"
+	wsUrl  = "wss://api.stockfighter.io/ob/ws/"
 )
 
 type apiCall interface {
