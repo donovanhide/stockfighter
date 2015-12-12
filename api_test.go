@@ -23,8 +23,8 @@ func checkErr(t *testing.T, desc string, err error) {
 func TestUnauthenticated(t *testing.T) {
 	sf := NewStockfighter(*apiKey, *debug)
 
-	checkErr(t, "Heartbeat", sf.Heartbeat())
-	checkErr(t, "Venue Heartbet", sf.VenueHeartbeat("TESTEX"))
+	checkErr(t, "Heartbeat", sf.Heartbeat(""))
+	checkErr(t, "Venue Heartbeat", sf.Heartbeat("TESTEX"))
 
 	stocks, err := sf.Stocks("TESTEX")
 	checkErr(t, "Stocks", err)
