@@ -82,11 +82,8 @@ type quoteMessage struct {
 }
 
 type executionMessage struct {
-	Ok      bool
-	Account string
-	Venue   string
-	Symbol  string
-	Order   Execution
+	Ok bool
+	Execution
 }
 
 type gameResponse struct {
@@ -235,7 +232,7 @@ func (sf *Stockfighter) Executions(account, venue, stock string) (chan *Executio
 			return err
 		}
 		if execution.Ok {
-			c <- &execution.Order
+			c <- &execution.Execution
 		}
 		return nil
 	})
@@ -276,10 +273,21 @@ func (sf *Stockfighter) Stop(id uint64) error {
 func (sf *Stockfighter) GameStatus(id uint64) (*GameState, error) {
 	var resp gameStateResponse
 	url := gmUrl("instances/%d", id)
-	if err := sf.do("Get", url, nil, &resp); err != nil {
+	if err := sf.do("GET", url, nil, &resp); err != nil {
 		return nil, err
 	}
 	return &resp.GameState, nil
+}
+
+func (sf *Stockfighter) Judge(id uint64) error {
+	var resp response
+	url := gmUrl("instances/%d/judge", id)
+	test := map[string]interface{}{"test": "test"}
+	body, err := encodeJson(test)
+	if err != nil {
+		return err
+	}
+	return sf.do("POST", url, body, &resp)
 }
 
 func encodeJson(v interface{}) (io.Reader, error) {
