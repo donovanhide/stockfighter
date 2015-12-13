@@ -26,7 +26,7 @@ func gmUrl(path string, args ...interface{}) string {
 }
 
 func wsUrl(path string, args ...interface{}) string {
-	return fmt.Sprintf("wss://api.stockfighter.io/ob/ws/"+path, args...)
+	return fmt.Sprintf("wss://api.stockfighter.io/ob/api/ws/"+path, args...)
 }
 
 type apiCall interface {
@@ -77,13 +77,16 @@ type bulkOrderResponse struct {
 }
 
 type quoteMessage struct {
-	Ok bool
-	Quote
+	Ok    bool
+	Quote Quote
 }
 
 type executionMessage struct {
-	Ok bool
-	Execution
+	Ok      bool
+	Account string
+	Venue   string
+	Symbol  string
+	Order   Execution
 }
 
 type gameResponse struct {
@@ -232,7 +235,7 @@ func (sf *Stockfighter) Executions(account, venue, stock string) (chan *Executio
 			return err
 		}
 		if execution.Ok {
-			c <- &execution.Execution
+			c <- &execution.Order
 		}
 		return nil
 	})
