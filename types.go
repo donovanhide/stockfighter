@@ -28,6 +28,9 @@ type GameState struct {
 		EndOfTheWorldDay uint64
 		TradingDay       uint64
 	}
+	Flash struct {
+		Info string
+	}
 	Done  bool
 	Id    uint64
 	State string
