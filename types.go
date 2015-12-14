@@ -126,6 +126,10 @@ func (o OrderType) MarshalText() ([]byte, error) {
 	return []byte(orderTypes[o]), nil
 }
 
+func (o OrderType) String() string {
+	return orderTypes[o]
+}
+
 var orderTypeMap = map[string]OrderType{
 	"limit":               Limit,
 	"market":              Market,
