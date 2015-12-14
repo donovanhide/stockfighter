@@ -206,7 +206,7 @@ func (sf *Stockfighter) Quotes(account, venue, stock string) (chan *Quote, error
 	c := make(chan *Quote)
 	return c, sf.pump(url, func(conn *websocket.Conn) error {
 		var quote quoteMessage
-		if err := conn.ReadJSON(&quote); err != nil {
+		if err := sf.decodeMessage(conn, &quote); err != nil {
 			close(c)
 			return err
 		}
@@ -227,7 +227,7 @@ func (sf *Stockfighter) Executions(account, venue, stock string) (chan *Executio
 	c := make(chan *Execution)
 	return c, sf.pump(url, func(conn *websocket.Conn) error {
 		var execution executionMessage
-		if err := conn.ReadJSON(&execution); err != nil {
+		if err := sf.decodeMessage(conn, &execution); err != nil {
 			close(c)
 			return err
 		}
@@ -236,6 +236,17 @@ func (sf *Stockfighter) Executions(account, venue, stock string) (chan *Executio
 		}
 		return nil
 	})
+}
+
+func (sf *Stockfighter) decodeMessage(conn *websocket.Conn, v interface{}) error {
+	_, msg, err := conn.ReadMessage()
+	if err != nil {
+		return err
+	}
+	if sf.debug {
+		log.Println(string(msg))
+	}
+	return json.Unmarshal(msg, v)
 }
 
 // Start a new level.
