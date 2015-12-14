@@ -201,7 +201,7 @@ func (sf *Stockfighter) Cancel(venue, stock string, id uint64) error {
 func (sf *Stockfighter) Quotes(account, venue, stock string) (chan *Quote, error) {
 	url := wsUrl("%s/venues/%s/tickertape", account, venue)
 	if len(stock) > 0 {
-		url = wsUrl("%s/venues/%s/stocks/%s/tickertape", account, venue, stock)
+		url = wsUrl("%s/venues/%s/tickertape/stocks/%s", account, venue, stock)
 	}
 	c := make(chan *Quote)
 	return c, sf.pump(url, func(conn *websocket.Conn) error {
@@ -222,7 +222,7 @@ func (sf *Stockfighter) Quotes(account, venue, stock string) (chan *Quote, error
 func (sf *Stockfighter) Executions(account, venue, stock string) (chan *Execution, error) {
 	url := wsUrl("%s/venues/%s/executions", account, venue)
 	if len(stock) > 0 {
-		url = wsUrl("%s/venues/%s/stocks/%s/executions", account, venue, stock)
+		url = wsUrl("%s/venues/%s/executions/stocks/%s", account, venue, stock)
 	}
 	c := make(chan *Execution)
 	return c, sf.pump(url, func(conn *websocket.Conn) error {
@@ -318,6 +318,9 @@ func (sf *Stockfighter) do(method, url string, body io.Reader, value apiCall) er
 		log.Println(string(out))
 	}
 	if err := json.NewDecoder(resp.Body).Decode(value); err != nil {
+		if resp.StatusCode >= 500 {
+			return fmt.Errorf(resp.Status)
+		}
 		return err
 	}
 	return value.Err()
