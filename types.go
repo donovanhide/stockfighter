@@ -108,6 +108,7 @@ type Execution struct {
 	Symbol           string
 	Order            OrderState
 	StandingId       uint64
+	IncomingId       uint64
 	Price            uint64
 	Filled           uint64
 	FilledAt         time.Time
