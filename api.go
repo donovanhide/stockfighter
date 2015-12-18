@@ -13,7 +13,6 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
-	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -294,10 +293,14 @@ func (sf *Stockfighter) GameStatus(id uint64) (*GameState, error) {
 	return &resp.GameState, nil
 }
 
-func (sf *Stockfighter) Judge(id uint64) (*GameState, error) {
+func (sf *Stockfighter) Judge(id uint64, evidence *Evidence) (*GameState, error) {
+	body, err := encodeJson(evidence)
+	if err != nil {
+		return nil, err
+	}
 	var resp gameStateResponse
 	url := gmUrl("instances/%d/judge", id)
-	if err := sf.do("POST", url, strings.NewReader("{}"), &resp); err != nil {
+	if err := sf.do("POST", url, body, &resp); err != nil {
 		return nil, err
 	}
 	return &resp.GameState, nil

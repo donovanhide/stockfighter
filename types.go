@@ -120,6 +120,12 @@ type Execution struct {
 	IncomingComplete bool
 }
 
+type Evidence struct {
+	Account          string
+	ExplanationLink  string `json:"explanation_link"`
+	ExecutiveSummary string `json:"executive_summary"`
+}
+
 var orderTypes = [...]string{
 	Limit:             "limit",
 	Market:            "market",
