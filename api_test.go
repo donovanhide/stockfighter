@@ -32,17 +32,11 @@ func TestUnauthenticated(t *testing.T) {
 		t.Fatalf("No stocks returned")
 	}
 
-	orderbook, err := sf.OrderBook("TESTEX", "FOOBAR")
+	_, err = sf.OrderBook("TESTEX", "FOOBAR")
 	checkErr(t, "Orderbook", err)
-	if len(orderbook.Asks) == 0 && len(orderbook.Bids) == 0 {
-		t.Fatalf("No asks or bids returned")
-	}
 
-	quote, err := sf.Quote("TESTEX", "FOOBAR")
+	_, err = sf.Quote("TESTEX", "FOOBAR")
 	checkErr(t, "Quote", err)
-	if quote.LastTrade.IsZero() {
-		t.Fatalf("Invalid last trade")
-	}
 }
 
 func TestAuthenticated(t *testing.T) {
