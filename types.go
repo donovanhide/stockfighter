@@ -29,7 +29,9 @@ type GameState struct {
 		TradingDay       uint64
 	}
 	Flash struct {
-		Info string
+		Info    string
+		Warning string
+		Danger  string
 	}
 	Done  bool
 	Id    uint64
@@ -57,11 +59,13 @@ type StandingOrder struct {
 	IsBuy    bool
 }
 
+type StandingOrderSlice []StandingOrder
+
 type OrderBook struct {
 	Venue     string
 	Symbol    string
-	Asks      []StandingOrder
-	Bids      []StandingOrder
+	Asks      StandingOrderSlice
+	Bids      StandingOrderSlice
 	TimeStamp time.Time `json:"ts"`
 }
 
@@ -145,4 +149,13 @@ func (o *OrderType) UnmarshalText(text []byte) error {
 		return nil
 	}
 	return fmt.Errorf("Unknown order type: %s", text)
+}
+
+// Total depth of offers
+func (s StandingOrderSlice) Depth() uint64 {
+	var depth uint64
+	for _, so := range s {
+		depth += so.Quantity
+	}
+	return depth
 }

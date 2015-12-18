@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httputil"
+	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -175,6 +176,16 @@ func (sf *Stockfighter) Status(venue, stock string, id uint64) (*OrderState, err
 	return &resp.OrderState, nil
 }
 
+// Cancel an existing order.
+func (sf *Stockfighter) Cancel(venue, stock string, id uint64) (*OrderState, error) {
+	var resp orderResponse
+	url := apiUrl("venues/%s/stocks/%s/orders/%d", venue, stock, id)
+	if err := sf.do("DELETE", url, nil, &resp); err != nil {
+		return nil, err
+	}
+	return &resp.OrderState, nil
+}
+
 // Get the statuses for all an account's orders of a stock on a venue.
 // If stock is a non-empty string, only statuses for that stock are returned
 func (sf *Stockfighter) StockStatus(account, venue, stock string) ([]OrderState, error) {
@@ -187,13 +198,6 @@ func (sf *Stockfighter) StockStatus(account, venue, stock string) ([]OrderState,
 		return nil, err
 	}
 	return resp.Orders, nil
-}
-
-// Cancel an existing order
-func (sf *Stockfighter) Cancel(venue, stock string, id uint64) error {
-	var resp response
-	url := apiUrl("venues/%s/stocks/%s/orders/%d", venue, stock, id)
-	return sf.do("DELETE", url, nil, &resp)
 }
 
 // Subscribe to a stream of quotes for a venue.
@@ -290,15 +294,14 @@ func (sf *Stockfighter) GameStatus(id uint64) (*GameState, error) {
 	return &resp.GameState, nil
 }
 
-func (sf *Stockfighter) Judge(id uint64) error {
-	var resp response
+func (sf *Stockfighter) Judge(id uint64) (*GameState, error) {
+	var resp gameStateResponse
 	url := gmUrl("instances/%d/judge", id)
-	test := map[string]interface{}{"test": "test"}
-	body, err := encodeJson(test)
-	if err != nil {
-		return err
+	if err := sf.do("POST", url, strings.NewReader("{}"), &resp); err != nil {
+		return nil, err
 	}
-	return sf.do("POST", url, body, &resp)
+	return &resp.GameState, nil
+
 }
 
 func encodeJson(v interface{}) (io.Reader, error) {
