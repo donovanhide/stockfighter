@@ -121,7 +121,7 @@ type Execution struct {
 }
 
 type Evidence struct {
-	Account          string
+	Account          string `json:"account"`
 	ExplanationLink  string `json:"explanation_link"`
 	ExecutiveSummary string `json:"executive_summary"`
 }
