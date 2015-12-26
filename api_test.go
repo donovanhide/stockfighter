@@ -3,6 +3,7 @@ package stockfighter
 import (
 	"flag"
 	"testing"
+	"time"
 )
 
 var (
@@ -47,21 +48,75 @@ func TestAuthenticated(t *testing.T) {
 	sf := NewStockfighter(*apiKey, *debug)
 	game, err := sf.Start("first_steps")
 	checkErr(t, "Start", err)
-	defer sf.Stop(game.InstanceId)
+
+	t.Log(game)
+
+	defer func() {
+		checkErr(t, "Stop", sf.Stop(game.InstanceId))
+	}()
 
 	if len(game.Venues) == 0 {
 		t.Fatalf("No venues")
 	}
-	venue := game.Venues[0]
 
 	if len(game.Tickers) == 0 {
 		t.Fatalf("No tickers")
 	}
-	stock := game.Tickers[0]
 
-	quotes, err := sf.Quotes(game.Account, venue, stock)
+	var (
+		account = game.Account
+		venue   = game.Venues[0]
+		stock   = game.Tickers[0]
+	)
+
+	quotes, err := sf.Quotes(account, venue, stock)
 	checkErr(t, "Quotes", err)
-	for i := 0; i < 5; i++ {
-		t.Log(<-quotes)
+
+	executions, err := sf.Executions(account, venue, stock)
+	checkErr(t, "Executions", err)
+
+	// Loop until we get a filled market trade
+	var ts time.Time
+	for {
+		os, err := sf.Place(&Order{
+			Account:   account,
+			Venue:     venue,
+			Stock:     stock,
+			Price:     0,
+			Quantity:  100,
+			Direction: "buy",
+			OrderType: Market,
+		})
+		checkErr(t, "Place", err)
+		t.Log(os)
+		if len(os.Fills) > 0 {
+			ts = os.Fills[0].TimeStamp
+			break
+		}
+		time.Sleep(time.Second)
 	}
+
+	// Check trade appears in quote stream
+	for quote := range quotes {
+		if quote.LastTrade.Equal(ts) {
+			t.Log(quote)
+			break
+		}
+	}
+
+	// Check trade appears in executionstream
+	for execution := range executions {
+		if execution.FilledAt.Equal(ts) {
+			t.Log(execution)
+			break
+		}
+	}
+
+	orders, err := sf.StockStatus(account, venue, stock)
+	checkErr(t, "StockStatus", err)
+
+	if len(orders) == 0 {
+		t.Fatalf("No record of order")
+	}
+	t.Log(orders[0])
 }

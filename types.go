@@ -19,6 +19,7 @@ type Game struct {
 	InstanceId           uint64
 	Instructions         map[string]string
 	SecondsPerTradingDay uint64
+	Balances             map[string]int64
 	Tickers              []string
 	Venues               []string
 }
@@ -82,7 +83,7 @@ type OrderState struct {
 	OriginalQuantity uint64 `json:"originalQty"`
 	Quantity         uint64 `json:"qty"`
 	Direction        string
-	Type             OrderType
+	OrderType        OrderType
 	Id               uint64
 	Account          string
 	Timestamp        time.Time `json:"ts"`
@@ -131,6 +132,29 @@ var orderTypes = [...]string{
 	Market:            "market",
 	FillOrKill:        "fill-or-kill",
 	ImmediateOrCancel: "immediate-or-cancel",
+}
+
+func ft(ts time.Time) string {
+	return ts.Format(time.StampNano)
+}
+
+func (g Game) String() string {
+	return fmt.Sprintf("Account: %s Venues: %+v Tickers: %+v InstanceId: %6d SecondsPerDay: %d", g.Account, g.Venues, g.Tickers, g.InstanceId, g.SecondsPerTradingDay)
+}
+
+func (os OrderState) String() string {
+	format := "%s Venue: %s Symbol: %s Direction: %4s Price: %8d Quantity: %6d Filled: %6d/%6d Open: %5t Fills: %4d Type: %s"
+	return fmt.Sprintf(format, ft(os.Timestamp), os.Venue, os.Symbol, os.Direction, os.Price, os.OriginalQuantity, os.TotalFilled, os.Quantity, os.Open, len(os.Fills), os.OrderType)
+}
+
+func (q Quote) String() string {
+	format := "%s Venue: %s Symbol: %s Bid: %8d BidSize: %6d BidDepth %6d Ask: %8d AskSize: %6d AskDepth %6d Last: (%8d,%8d,%s)"
+	return fmt.Sprintf(format, ft(q.QuoteTime), q.Venue, q.Symbol, q.Bid, q.BidSize, q.BidDepth, q.Ask, q.AskSize, q.AskDepth, q.Last, q.LastSize, ft(q.LastTrade))
+}
+
+func (e Execution) String() string {
+	format := "%s Account: %s Venue: %s Symbol: %s Direction: %4s Price: %8d Filled: %6d Open: %5t Fills: %4d Standing: %6d Incoming: %6d Type: %s"
+	return fmt.Sprintf(format, ft(e.FilledAt), e.Account, e.Venue, e.Symbol, e.Order.Direction, e.Price, e.Filled, e.Order.Open, len(e.Order.Fills), e.StandingId, e.IncomingId, e.Order.OrderType)
 }
 
 func (o OrderType) MarshalText() ([]byte, error) {

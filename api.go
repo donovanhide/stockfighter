@@ -17,16 +17,22 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func apiUrl(path string, args ...interface{}) string {
-	return fmt.Sprintf("https://api.stockfighter.io/ob/api/"+path, args...)
-}
+// Domain which hosts the API servers
+var URL_BASE = "api.stockfighter.io"
 
 func gmUrl(path string, args ...interface{}) string {
-	return fmt.Sprintf("https://api.stockfighter.io/gm/"+path, args...)
+	format := "https://" + URL_BASE + "/gm/" + path
+	return fmt.Sprintf(format, args...)
+}
+
+func apiUrl(path string, args ...interface{}) string {
+	format := "https://" + URL_BASE + "/ob/api/" + path
+	return fmt.Sprintf(format, args...)
 }
 
 func wsUrl(path string, args ...interface{}) string {
-	return fmt.Sprintf("wss://api.stockfighter.io/ob/api/ws/"+path, args...)
+	format := "wss://" + URL_BASE + "/ob/api/ws/" + path
+	return fmt.Sprintf(format, args...)
 }
 
 type apiCall interface {
